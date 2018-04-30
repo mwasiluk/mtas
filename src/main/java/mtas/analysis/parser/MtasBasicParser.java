@@ -933,8 +933,17 @@ public abstract class MtasBasicParser extends MtasParser {
             }
           } else if (mappingValue.get("type")
               .equals(MtasParserMapping.PARSER_TYPE_TEXT_SPLIT)) {
-            String[] textValues = checkObjects[0].getText()
-                .split(Pattern.quote(mappingValue.get(MAPPING_VALUE_SPLIT)));
+
+            String splitMappingValue = mappingValue.get(MAPPING_VALUE_SPLIT);
+            String[] textValues;
+            if(splitMappingValue.startsWith("regex:")){
+              textValues = checkObjects[0].getText()
+                      .split(splitMappingValue.replaceFirst("regex:", ""));
+            }else{
+              textValues = checkObjects[0].getText()
+                      .split(Pattern.quote(splitMappingValue));
+            }
+
             textValues = computeFilteredSplitValues(textValues,
                 mappingValue.get(MAPPING_VALUE_FILTER));
             if (textValues != null && textValues.length > 0) {
