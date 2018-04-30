@@ -226,6 +226,9 @@ public abstract class MtasBasicParser extends MtasParser {
   /** The Constant MAPPING_VALUE_SPLIT. */
   protected static final String MAPPING_VALUE_SPLIT = "split";
 
+  /** The Constant MAPPING_VALUE_SPLIT_REGEX_PREFIX. */
+  protected static final String MAPPING_VALUE_SPLIT_REGEX_PREFIX = "regex:";
+
   /** The Constant MAPPING_VALUE_NUMBER. */
   protected static final String MAPPING_VALUE_NUMBER = "number";
 
@@ -935,16 +938,15 @@ public abstract class MtasBasicParser extends MtasParser {
               .equals(MtasParserMapping.PARSER_TYPE_TEXT_SPLIT)) {
 
             String splitMappingValue = mappingValue.get(MAPPING_VALUE_SPLIT);
-            String[] textValues;
-            if(splitMappingValue.startsWith("regex:")){
-              textValues = checkObjects[0].getText()
-                      .split(splitMappingValue.replaceFirst("regex:", ""));
+
+            String splitRegex;
+            if(splitMappingValue.startsWith(MAPPING_VALUE_SPLIT_REGEX_PREFIX)){
+              splitRegex = splitMappingValue.replaceFirst(MAPPING_VALUE_SPLIT_REGEX_PREFIX, "");
             }else{
-              textValues = checkObjects[0].getText()
-                      .split(Pattern.quote(splitMappingValue));
+              splitRegex = Pattern.quote(splitMappingValue);
             }
 
-            textValues = computeFilteredSplitValues(textValues,
+            String[] textValues = computeFilteredSplitValues(checkObjects[0].getText().split(splitRegex),
                 mappingValue.get(MAPPING_VALUE_FILTER));
             if (textValues != null && textValues.length > 0) {
               String[] nextValue = new String[value.length * textValues.length];
