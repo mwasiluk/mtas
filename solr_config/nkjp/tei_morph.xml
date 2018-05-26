@@ -1,0 +1,625 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<mtas>
+
+	<!-- START MTAS INDEX CONFIGURATION -->
+	<index>
+		<!-- START GENERAL SETTINGS MTAS INDEX PROCESS -->
+		<payload index="true" />
+		<offset index="true" />
+		<realoffset index="true" />
+		<parent index="true" />
+		<!-- END GENERAL SETTINGS MTAS INDEX PROCESS -->
+	</index>
+	<!-- END MTAS INDEX CONFIGURATION -->
+
+	<!-- START CONFIGURATION MTAS ISO/TEI PARSER -->
+	<parser name="mtas.analysis.parser.MtasIpiTEIParser">
+
+		<!-- START GENERAL SETTINGS MTAS ISO/TEI PARSER -->
+		<autorepair value="true" />
+		<makeunique value="true" />
+		<!-- END GENERAL SETTINGS MTAS ISO/TEI PARSER -->
+
+		<!-- START VARIABLES -->
+		<variables>
+
+		</variables>
+		<!-- END VARIABLES -->
+
+		<!-- START REFERENCES -->
+
+
+
+		<!-- END REFERENCES -->
+		<references>
+			<reference name="wref" ref="id" />
+		</references>
+		<!-- START MAPPINGS -->
+		<mappings>
+
+			<!-- START WORDS -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="true">
+					<pre>
+						<item type="string" value="seg" />
+					</pre>
+				</token>
+                <condition>
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="foreign" />
+					</pre>
+					<post>
+						<item type="attribute" name="foreign" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="foreign" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="page" />
+					</pre>
+					<post>
+						<item type="attribute" name="pn" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="pn" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="xxx" />
+					</pre>
+					<post>
+						<item type="attribute" name="xxx" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="xxx" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+
+
+				</condition>
+			</mapping>
+
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="omitted_right" />
+					</pre>
+					<post>
+						<item type="attribute" name="gap_right" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="gap_right" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+			<!-- omitted_left -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="omitted_left" />
+					</pre>
+					<post>
+						<item type="attribute" name="gap_left" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="gap_left" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+			<!-- p_begin -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="p_begin" />
+					</pre>
+					<post>
+						<item type="attribute" name="p_begin" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="p_begin" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+			<!-- ab_begin -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="ab_begin" />
+					</pre>
+					<post>
+						<item type="attribute" name="ab_begin" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="ab_begin" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+			<!-- note -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="note" />
+					</pre>
+					<post>
+						<item type="attribute" name="note" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="note" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+			<!-- fw -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="fw" />
+					</pre>
+					<post>
+						<item type="attribute" name="fw" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="fw" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+			<!-- wsd -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="wsd" />
+					</pre>
+					<post>
+						<item type="attribute" name="wsd" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="wsd" />
+                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
+
+			<!-- END WORDS -->
+
+			<!-- START WORD ANNOTATIONS -->
+
+			<!-- morph -->
+			<mapping type="wordAnnotation" name="fs">
+				<condition>
+					<item type="attribute" name="type"  condition="morph" />
+					<item type="ancestorName" condition="seg" />
+				</condition>
+			</mapping>
+
+			<!-- orth no disamb-->
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="orth" />
+					<item type="ancestorName" condition="fs" />
+					<item type="ancestorAttribute"  name="type" condition="morph"/>
+				</condition>
+			</mapping>
+
+			<!-- orth  no disamb string-->
+			<mapping type="wordAnnotation" name="string">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="orth" />
+					</pre>
+					<post>
+						<item type="text" />
+					</post>
+				</token>
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string"  value="orth_lc"/>
+					</pre>
+					<post>
+						<item type="text" filter="ascii,lowercase" />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="orth" />
+				</condition>
+			</mapping>
+
+			<!-- translit -->
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="translit" />
+					<item type="ancestorName"  condition="fs" />
+					<item type="ancestorAttribute" name="type" condition="morph"/>
+				</condition>
+			</mapping>
+
+			<!-- translit string-->
+			<mapping type="wordAnnotation" name="string">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="translit" />
+					</pre>
+					<post>
+						<item type="text" />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="translit" />
+				</condition>
+			</mapping>
+
+
+			<!-- nps -->
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="nps" />
+					<item type="ancestorName"  condition="fs" />
+					<item type="ancestorAttribute" name="type" condition="morph"/>
+				</condition>
+			</mapping>
+
+
+			<!-- nps value-->
+			<mapping type="wordAnnotation" name="binary">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="nps" />
+					</pre>
+					<post>
+						<item type="attribute" name="value" />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="nps" />
+				</condition>
+			</mapping>
+
+			<!-- interps  no disamb -->
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="interps" />
+					<item type="ancestorName"  condition="fs" />
+					<item type="ancestorAttribute" name="type" condition="morph"/>
+				</condition>
+			</mapping>
+
+			<!-- lex  no disamb -->
+			<mapping type="wordAnnotation" name="fs">
+				<condition>
+					<item type="attribute" name="type"  condition="lex" />
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="interps"/>
+				</condition>
+			</mapping>
+
+			<!-- lex base  no disamb-->
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="base" />
+					<item type="ancestorName" condition="fs" />
+					<item type="ancestorAttribute" name="type" condition="lex"/>
+				</condition>
+			</mapping>
+
+			<!-- lex base  no disamb string-->
+			<mapping type="wordAnnotation" name="string">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="_base" />
+					</pre>
+					<post>
+						<item type="text" />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="base"/>
+				</condition>
+			</mapping>
+
+
+			<!-- lex ctag pos-->
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="ctag" />
+					<item type="ancestorName" condition="fs" />
+					<item type="ancestorAttribute" name="type" condition="lex"/>
+				</condition>
+			</mapping>
+
+			<!-- lex ctag pos  no disamb string-->
+			<mapping type="wordAnnotation" name="symbol">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="_pos" />
+					</pre>
+					<post>
+						<item type="attribute" name="value" />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="ctag"/>
+				</condition>
+			</mapping>
+
+
+			<!--&lt;!&ndash; lex msd  no disamb&ndash;&gt;
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="msd" />
+					<item type="ancestorName" condition="fs" />
+					<item type="ancestorAttribute" name="type" condition="lex"/>
+				</condition>
+			</mapping>
+
+			&lt;!&ndash; lex msd symbol  no disamb&ndash;&gt;
+			<mapping type="wordAnnotation" name="symbol">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="_msd" />
+					</pre>
+					<post>
+						<item type="attribute" name="value" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="value" />
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="msd"/>
+				</condition>
+			</mapping>-->
+
+
+
+
+
+
+			<!-- disamb -->
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="disamb" />
+					<item type="ancestorName"  condition="fs" />
+					<item type="ancestorAttribute" name="type" condition="morph"/>
+				</condition>
+			</mapping>
+
+			<!-- disamb tool_report-->
+			<mapping type="wordAnnotation" name="fs">
+				<condition>
+					<item type="attribute" name="type"  condition="tool_report" />
+					<item type="ancestorName"  condition="f" />
+					<item type="ancestorAttribute" name="name" condition="disamb"/>
+				</condition>
+			</mapping>
+
+
+			<!-- disamb -> interpretation -->
+			<mapping type="wordAnnotation" name="f">
+				<condition>
+					<item type="attribute" name="name"  condition="interpretation" />
+					<item type="ancestorName" condition="fs" />
+					<item type="ancestorAttribute" name="type" condition="tool_report"/>
+				</condition>
+			</mapping>
+
+			<!--  disamb -> interpretation string-->
+			<!--<mapping type="wordAnnotation" name="string">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="interpretation" />
+					</pre>
+					<post>
+						<item type="text" />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="interpretation"/>
+				</condition>
+			</mapping>-->
+
+			<!-- disamb -> interpretation -> tag  split -->
+			<mapping type="wordAnnotation" name="string">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="tag" />
+					</pre>
+					<post>
+						<item type="textSplit" value="regex:^.+?:" filter="split(1)"  />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="interpretation"/>
+				</condition>
+			</mapping>
+
+			<!-- disamb -> interpretation  -> base split -->
+			<mapping type="wordAnnotation" name="string">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="base" />
+					</pre>
+					<post>
+						<item type="textSplit" value=":" filter="split(0)"  />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="interpretation"/>
+				</condition>
+			</mapping>
+
+
+			<!-- disamb -> interpretation  -> pos split -->
+			<mapping type="wordAnnotation" name="string">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="pos" />
+					</pre>
+					<post>
+						<item type="textSplit" value=":" filter="split(1)"  />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="interpretation"/>
+				</condition>
+			</mapping>
+
+			<!-- disamb -> interpretation  -> feat split -->
+			<mapping type="wordAnnotation" name="string">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="feat" />
+					</pre>
+					<post>
+						<item type="textSplit" value=":" filter="split(2-11)"  />
+					</post>
+				</token>
+				<condition>
+					<item type="ancestorName" condition="f" />
+					<item type="ancestorAttribute" name="name" condition="interpretation"/>
+				</condition>
+			</mapping>
+
+
+			<!-- END WORD ANNOTATIONS -->
+
+			<!-- START RELATIONS -->
+			<mapping type="relation" name="named">
+      		</mapping>
+
+			<mapping type="relation" name="ne">
+				<token type="string" offset="false" realoffset="false" parent="true">
+					<pre>
+						<item type="name" />
+					</pre>
+					<post>
+						<item type="attribute" name="type" />
+					</post>
+					<!--<payload>
+						<item type="attribute" name="certainty" />
+					</payload>-->
+				</token>
+				<condition>
+					<item type="attribute" name="type" />
+					<item type="ancestorName" condition="named" />
+				</condition>
+			</mapping>
+
+
+			<!-- END RELATIONS -->
+
+
+			<!-- START GROUPS -->
+
+			<mapping type="group" name="p">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="name" />
+					</pre>
+				</token>
+				<!--<token type="string" offset="false" realoffset="false" parent="true">
+					<pre>
+						<item type="string" value="p.id" />
+					</pre>
+					<post>
+						<item type="attribute" name="#" />
+					</post>
+				</token>-->
+			</mapping>
+			<mapping type="group" name="s">
+				<token type="string" offset="false" realoffset="false" parent="true">
+					<pre>
+						<item type="name" />
+					</pre>
+				</token>
+
+				<!--<token type="string" offset="false" realoffset="false" parent="true">
+					<pre>
+						<item type="string" value="s.id" />
+					</pre>
+					<post>
+						<item type="attribute" name="#" />
+					</post>
+				</token>-->
+			</mapping>
+
+
+
+		<!--	<mapping type="group" name="pages">
+			</mapping>
+
+			<mapping type="group" name="page" start="from" end="to">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="page_span" />
+					</pre>
+					<post>
+						<item type="attribute" name="n" />
+					</post>
+				</token>
+			</mapping>-->
+
+			<!-- END GROUPS -->
+
+			<!-- START GROUP ANNOTATIONS -->
+
+			<!-- START GROUP ANNOTATIONS -->
+
+			<!--<mapping type="groupAnnotation" name="pages">
+			</mapping>
+
+			<mapping type="groupAnnotation" name="page" start="from" end="to">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="page" />
+					</pre>
+					<post>
+						<item type="attribute" name="n" />
+					</post>
+				</token>
+			</mapping>-->
+
+
+			<!-- END GROUP ANNOTATIONS -->
+
+		</mappings>
+		<!-- END MAPPINGS -->
+
+	</parser>
+	<!-- END CONFIGURATION MTAS ISO/TEI PARSER -->
+
+</mtas>

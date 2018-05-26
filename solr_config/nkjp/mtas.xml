@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<mtas>
+  <configurations type="mtas.analysis.util.MtasTokenizerFactory">
+    <configuration name="tei" file="tei_morph.xml" />
+  </configurations>
+  <configurations type="mtas.analysis.util.MtasCharFilterFactory">
+    <configuration name="tei" type="file" prefix="/path/to/corpus/files/" postfix="" />
+  </configurations>
+</mtas>
+
