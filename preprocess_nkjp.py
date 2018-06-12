@@ -916,9 +916,9 @@ def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_mo
             res[c] = text_class_elem.find('tei:catRef[@scheme="#%s"]' % c, namespaces=ns).attrib['target']
             arr = re.findall(r"#([^#]+)", res[c])
             if len(arr) > 0:
-                res[c] = arr
+                res[c] = [s.strip() for s in arr]
             else:
-                res[c] = [res[c]]
+                res[c] = [res[c].strip()]
         except:
             pass
 
