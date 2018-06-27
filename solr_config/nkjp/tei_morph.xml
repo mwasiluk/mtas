@@ -44,8 +44,8 @@
 						<item type="string" value="seg" />
 					</pre>
 				</token>
-                <condition>
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+				<condition>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 			<mapping type="word" name="seg">
@@ -59,7 +59,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="foreign" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -74,7 +74,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="pn" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -89,7 +89,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="xxx" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 
 
 				</condition>
@@ -106,7 +106,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="gap_right" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -122,7 +122,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="gap_left" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -138,7 +138,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="p_begin" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -154,7 +154,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="ab_begin" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -170,7 +170,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="note" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -186,7 +186,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="fw" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -202,7 +202,7 @@
 				</token>
 				<condition>
 					<item type="attribute" name="wsd" />
-                    <item type="attribute" name="rejected" condition="true" not="true"/>
+					<item type="attribute" name="rejected" condition="true" not="true"/>
 				</condition>
 			</mapping>
 
@@ -519,7 +519,7 @@
 
 			<!-- START RELATIONS -->
 			<mapping type="relation" name="named">
-      		</mapping>
+			</mapping>
 
 			<mapping type="relation" name="ne">
 				<token type="string" offset="false" realoffset="false" parent="true">
@@ -536,6 +536,26 @@
 				<condition>
 					<item type="attribute" name="type" />
 					<item type="ancestorName" condition="named" />
+				</condition>
+			</mapping>
+
+
+
+			<mapping type="relation" name="groups">
+			</mapping>
+
+			<mapping type="relation" name="g">
+				<token type="string" offset="false" realoffset="false" parent="true">
+					<pre>
+						<item type="name" />
+					</pre>
+					<post>
+						<item type="attribute" name="type" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="type" />
+					<item type="ancestorName" condition="groups" />
 				</condition>
 			</mapping>
 
@@ -579,19 +599,19 @@
 
 
 
-		<!--	<mapping type="group" name="pages">
-			</mapping>
+			<!--	<mapping type="group" name="pages">
+                </mapping>
 
-			<mapping type="group" name="page" start="from" end="to">
-				<token type="string" offset="false" realoffset="false" parent="false">
-					<pre>
-						<item type="string" value="page_span" />
-					</pre>
-					<post>
-						<item type="attribute" name="n" />
-					</post>
-				</token>
-			</mapping>-->
+                <mapping type="group" name="page" start="from" end="to">
+                    <token type="string" offset="false" realoffset="false" parent="false">
+                        <pre>
+                            <item type="string" value="page_span" />
+                        </pre>
+                        <post>
+                            <item type="attribute" name="n" />
+                        </post>
+                    </token>
+                </mapping>-->
 
 			<!-- END GROUPS -->
 

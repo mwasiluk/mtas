@@ -40,6 +40,10 @@ class Proc:
         self.load_ner = load_ner
         self.load_foreign_from_seg_only = load_foreign_from_seg_only
 
+        self.load_words = options.load_words
+        self.load_groups = options.load_groups
+
+
         self.pages = []
         self.foreigns = {}
 
@@ -118,6 +122,10 @@ class Proc:
         text_elem.insert(0, pages_elem)
         named_elem = ET.Element('named', nsmap=ns)
         text_elem.insert(0, named_elem)
+        words_elem = ET.Element('words', nsmap=ns)
+        text_elem.insert(0, words_elem)
+        groups_elem = ET.Element('groups', nsmap=ns)
+        text_elem.insert(0, groups_elem)
 
         body = txt_doc.find('.//tei:text', namespaces=ns)
 
@@ -145,6 +153,124 @@ class Proc:
                 except:
                     pass
 
+        words_file_path = os.path.join(dirname, self.options.words_filename)
+        if (self.load_words or self.load_groups) and not os.path.isfile(words_file_path):
+            print("words file not found!")
+            self.load_groups = False
+            self.load_words = False
+
+        if self.load_words or self.load_groups:
+            self.words_doc = ET.parse(words_file_path, ET.XMLParser(huge_tree=True, recover=True, dtd_validation=False, load_dtd=False))
+
+            self.word_by_id = {}
+            for s in self.words_doc.xpath(".//tei:seg", namespaces=ns):
+
+                s_id = self.get_id(s)
+                words_item = {
+                    'words_seg_id': s_id,
+                    'morph_segment_ids': []
+                }
+                if self.load_groups:
+                    self.word_by_id[s_id] = words_item
+
+
+                # self.words_list.append(words_item)
+                ptr_list = [ptr.replace(self.morphosyntax_filename + '#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
+                words_item['morph_segment_ids'] = ptr_list
+
+                try:
+                    fs = s.xpath("tei:fs[@type='words']", namespaces=ns)[0]
+                    try:
+                        words_item['base'] = fs.xpath("tei:f[@name='base']/tei:string/text()", namespaces=ns)[0]
+                    except:
+                        pass
+                    try:
+                        words_item['ctag'] = fs.xpath("tei:f[@name='ctag']/tei:symbol/@value", namespaces=ns)[0]
+                    except:
+                        pass
+                    try:
+                        words_item['msd'] = fs.xpath("tei:f[@name='msd']/tei:symbol/@value", namespaces=ns)[0]
+                    except:
+                        pass
+
+                except:
+                    pass
+
+                if self.load_words:
+                    self.append_word(words_elem, words_item, ns)
+
+        groups_file_path = os.path.join(dirname, self.options.groups_filename)
+        if self.load_groups and not os.path.isfile(groups_file_path):
+            print("groups file not found!")
+            self.load_groups = False
+        if self.load_groups:
+
+            group_by_id = {}
+            group_list = []
+            self.groups_doc = ET.parse(groups_file_path, ET.XMLParser(huge_tree=True, recover=True, dtd_validation=False, load_dtd=False))
+
+            for s in self.groups_doc.xpath(".//tei:seg", namespaces=ns):
+                s_id = self.get_id(s)
+                group_item = {
+                    'groups_seg_id': s_id
+                }
+                group_by_id[s_id] = group_item
+                group_list.append(group_item)
+                semh = None
+                synh = None
+
+                try:
+                    fs = s.xpath("tei:fs[@type='group']", namespaces=ns)[0]
+                    try:
+                        group_item['type'] = fs.xpath("tei:f[@name='type']/tei:symbol/@value", namespaces=ns)[0]
+                    except:
+                        pass
+                    try:
+                        group_item['semh'] = fs.xpath("tei:f[@name='semh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
+                    except:
+                        pass
+                    try:
+                        group_item['synh'] = fs.xpath("tei:f[@name='synh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
+                    except:
+                        pass
+
+                except:
+                    pass
+                ptr_list = [ptr.replace(self.options.words_filename + '#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
+                group_item['ptr_ids'] = ptr_list
+
+
+            for g in group_list:
+                morph_segments = []
+                words = []
+
+                buff = [g]
+
+                while len(buff):
+                    item = buff.pop(0)
+
+                    if 'morph_segment_ids' in item:
+                        morph_segments.extend(item['morph_segment_ids'])
+                        if 'words' in item:
+                            words.extend(item['words'])
+                        else:
+                            words.append(item)
+                        continue
+                    if 'ptr_ids' in item:
+                        for ptr in reversed(item['ptr_ids']):
+                            if ptr.startswith('groups_'):
+                                buff.insert(0, group_by_id[ptr])
+                            else:
+                                buff.insert(0, self.word_by_id[ptr])
+
+                g['words'] = words
+                g['morph_segment_ids'] = morph_segments
+                self.append_group(groups_elem, g, ns)
+
+            del group_by_id
+            del group_list
+
+        self.word_by_id = {}
 
         self.ner_by_morph_from = {}
         ner_file_path = os.path.join(dirname, self.options.ner_filename)
@@ -153,7 +279,6 @@ class Proc:
             self.load_ner = False
 
         if self.load_ner:
-
             unmapped_children_to_parent = {}
 
 
@@ -387,6 +512,46 @@ class Proc:
         morph_doc.write(os.path.join(dirname, 'mtas_tei.xml'), encoding='utf-8', xml_declaration=True)
 
 
+    def append_word(self, words_elem, word_item, ns):
+        if 'appended' in word_item and word_item['appended']:
+            return
+
+        attrs = {'id': word_item['words_seg_id'], 'base': word_item['base'], 'ctag': word_item['ctag'], 'msd': word_item['msd']}
+        for a in attrs:
+            if attrs[a] is None:
+                attrs[a] = ''
+        word_item['appended'] = True
+        element = ET.Element('w', attrib=attrs, nsmap=ns)
+        words_elem.append(element)
+
+
+        for seg_id in word_item['morph_segment_ids']:
+
+            seg_attrs = {'id': seg_id}
+            element.append(ET.Element('wref', attrib=seg_attrs, nsmap=ns))
+
+    def append_group(self, groups_elem, group_item, ns):
+        if 'appended' in group_item and group_item['appended']:
+            return
+
+        attrs = {'id': group_item['groups_seg_id'], 'type': group_item['type']}
+        for a in attrs:
+            if attrs[a] is None:
+                attrs[a] = ''
+        group_item['appended'] = True
+        element = ET.Element('g', attrib=attrs, nsmap=ns)
+        groups_elem.append(element)
+        for w in group_item['words']:
+            semh = w['words_seg_id'] == group_item['semh']
+            synh = w['words_seg_id'] == group_item['synh']
+            for seg_id in w['morph_segment_ids']:
+                seg_attrs = {'id': seg_id}
+                if semh:
+                    seg_attrs['semh'] = 'true'
+                if synh:
+                    seg_attrs['synh'] = 'true'
+                element.append(ET.Element('wref', attrib=seg_attrs, nsmap=ns))
+                semh = synh = False
 
 
     def append_ne(self, named_elem, ner_item, ns):
@@ -492,7 +657,7 @@ class Proc:
 
         if self.load_foreign and foreign is not None:
             # if not cur_morph_seg:
-                # cur_morph_seg = self.find_corresp_morph_seg(id)
+            # cur_morph_seg = self.find_corresp_morph_seg(id)
             try:
 
                 self.foreigns[foreign].add(id)
@@ -537,26 +702,26 @@ class Proc:
 
         if elem.tag == '{http://www.tei-c.org/ns/1.0}pb':
 
-                page_n = ""
-                if 'n' in elem.attrib:
-                    page_n = elem.attrib['n']
-                    # if page_n == '54':
-                    #     exit(0)
+            page_n = ""
+            if 'n' in elem.attrib:
+                page_n = elem.attrib['n']
+                # if page_n == '54':
+                #     exit(0)
 
-                self.prev_page = self.current_page
+            self.prev_page = self.current_page
 
-                self.current_page = {
-                    'n': page_n,
-                    'from': None,
-                    'from_morph': None,
-                    'to': None,
-                    'to_morph': None
-                }
+            self.current_page = {
+                'n': page_n,
+                'from': None,
+                'from_morph': None,
+                'to': None,
+                'to_morph': None
+            }
 
-                self.pages.append(self.current_page)
+            self.pages.append(self.current_page)
 
-                if self.debug:
-                    print(self.current_page)
+            if self.debug:
+                print(self.current_page)
         elif elem.tag == '{http://www.tei-c.org/ns/1.0}gap':
 
             if self.prevSeg is not None:
@@ -980,6 +1145,18 @@ def go():
     parser.add_option('--ner-name', type='string', action='store', default="ann_named.xml",
                       dest='ner_filename',
                       help='ner file name, default: ann_named.xml')
+    parser.add_option('--words', action='store_true',
+                      dest='load_words',
+                      help='load syntax words')
+    parser.add_option('--words-name', type='string', action='store', default="ann_words.xml",
+                      dest='words_filename',
+                      help='syntax words file name, default: ann_words.xml')
+    parser.add_option('--groups', action='store_true',
+                      dest='load_groups',
+                      help='load syntax groups')
+    parser.add_option('--groups-name', type='string', action='store', default="ann_groups.xml",
+                      dest='groups_filename',
+                      help='syntax groups file name, default: ann_groups.xml')
     parser.add_option('--metadata-only', action='store_true',
                       dest='metadata_only',
                       help='process metadata only')
