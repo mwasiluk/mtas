@@ -928,21 +928,19 @@ class Proc:
         # print(elem.tail)
         return parent_trailing_segments,parent_text_len
 
-def read_bibl(elem, res, ns, attr_prefix='', date_int=False):
-
+def read_bibl(elem, res, ns, attr_prefix='', date_int=False, additional_config=None):
 
     # res[attr_prefix + 'title'] = ''
     title_sub = []
 
     title_by_level = {}
+    all_titles = []
     for idx, title_elem in enumerate(elem.findall("tei:title", namespaces=ns)):
-
-
         try:
             level = title_elem.attrib['level']
         except:
             level = 'n/a'
-
+        all_titles.append(title_elem.text)
         title_by_level[level] = title_elem.text
         if idx > 0:
             title_sub.append(title_elem.text)
@@ -951,7 +949,9 @@ def read_bibl(elem, res, ns, attr_prefix='', date_int=False):
     if len(title_sub):
         res[attr_prefix + 'title_sub'] = title_sub
 
-    if 'n/a' in title_by_level:
+    if len(title_by_level) == 1:
+        title = all_titles[0]
+    elif 'n/a' in title_by_level:
         title = title_by_level['n/a']
 
     if 'a' in title_by_level:
@@ -1056,6 +1056,22 @@ def read_bibl(elem, res, ns, attr_prefix='', date_int=False):
     if len(refs):
         res[attr_prefix + 'link'] = refs
 
+
+    if additional_config:
+        single_conf = additional_config["single"]
+        for prop in single_conf:
+            prop_xpath = single_conf[prop]
+
+            try:
+                res_elem = elem.find(prop_xpath, namespaces=ns)
+                if res_elem is not None:
+                    res[attr_prefix + prop] = res_elem.text
+                    # print(prop, prop_xpath, res_elem.text)
+            except Exception as e:
+                print("error processing additional metadata bibl field", prop, prop_xpath, str(e))
+                pass
+
+
     child_bibl = elem.find("tei:bibl[@type]", namespaces=ns)
 
     if child_bibl is not None:
@@ -1063,28 +1079,35 @@ def read_bibl(elem, res, ns, attr_prefix='', date_int=False):
 
 
 
-def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_morphosyntax.xml', idno_type='nkjp', folder_name_as_id=False):
+def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_morphosyntax.xml', idno_type='nkjp', folder_name_as_id=False, additional_config=None):
 
-    ns = {'tei': 'http://www.tei-c.org/ns/1.0'}
+    ns = {'tei': 'http://www.tei-c.org/ns/1.0', 'xml': 'http://www.w3.org/XML/1998/namespace'}
 
     doc = ElementTree(file = filename)
     res = {
         'type': 'tei',
         'text_data': prefix+os.path.join(os.path.dirname(filename), mtas_tei_file_name)
     }
+    bibl_config = None
+    if additional_config:
+        try:
+            bibl_config = additional_config["bibl"]
+        except KeyError:
+            pass
 
     bibl_elem = doc.find(".//tei:sourceDesc/tei:bibl[@type='original']", namespaces=ns)
     if not bibl_elem:
         bibl_elem = doc.find(".//tei:sourceDesc/tei:bibl", namespaces=ns)
 
-    read_bibl(bibl_elem, res, ns, '', date_int)
+
+    read_bibl(bibl_elem, res, ns, '', date_int, additional_config=bibl_config)
 
     modernized_elem = bibl_elem.find("tei:bibl[@type='modernized']", namespaces=ns)
 
     if modernized_elem is not None:
         res['modernized'] = True
         monogr_elem = modernized_elem.find("tei:bibl[@type='monogr']", namespaces=ns)
-        read_bibl(modernized_elem, res, ns, 'modernized_', date_int)
+        read_bibl(modernized_elem, res, ns, 'modernized_', date_int, additional_config=bibl_config)
     else:
         res['modernized'] = False
 
@@ -1202,6 +1225,9 @@ def go():
     parser.add_option('--folder-name-as-id', action='store_true',
                       dest='folder_name_as_id',
                       help='folder-name-as-id')
+    parser.add_option('--meta-config', type='string', action='store', default=None,
+                      dest='meta_config',
+                      help='additional metadata config')
 
     (options, args) = parser.parse_args()
 
@@ -1210,6 +1236,29 @@ def go():
 
         print('See --help for details.')
         sys.exit(1)
+    meta_config = options.meta_config
+
+    if meta_config:
+        meta_config = load_config(meta_config)
+
+    # meta_config = {
+    #     "bibl": {
+    #         "single": {
+    #             "title_en": "tei:title[@xml:lang='en']",
+    #             "publisher": "tei:publisher[@xml:lang='pl']",
+    #             "publisher_en": "tei:publisher[@xml:lang='en']",
+    #             "termNo": "tei:note[@type='termNo']",
+    #             "type": "tei:note[@type='type']",
+    #             "sessionNo": "tei:note[@type='sessionNo']",
+    #             "dayNo": "tei:note[@type='dayNo']"
+    #         },
+    #         "multi":{
+    #
+    #         }
+    #
+    #     }
+    # }
+
     for i, filename in enumerate(args):
         print('%3d/%d: %s' % (i + 1, len(args), filename))
         try:
@@ -1220,7 +1269,7 @@ def go():
             else:
                 mtas_file_name = options.morph_name
 
-            meta = get_metadata(filename, options.prefix, options.date_int, mtas_file_name, idno_type=options.idno_type, folder_name_as_id=options.folder_name_as_id)
+            meta = get_metadata(filename, options.prefix, options.date_int, mtas_file_name, idno_type=options.idno_type, folder_name_as_id=options.folder_name_as_id, additional_config=meta_config)
 
             if preprocessing:
                 p = Proc(filename, options, text_strucutre_file_name = options.text_name, load_pages=options.load_pages, load_foreign=options.load_foreign,
