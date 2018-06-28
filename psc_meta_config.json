@@ -1,0 +1,15 @@
+{
+  "bibl": {
+    "single": {
+      "title_en": "tei:title[@xml:lang='en']",
+      "publisher": "tei:publisher[@xml:lang='pl']",
+      "publisher_en": "tei:publisher[@xml:lang='en']",
+      "termNo": "tei:note[@type='termNo']",
+      "text_type": "tei:note[@type='type']",
+      "sessionNo": "tei:note[@type='sessionNo']",
+      "dayNo": "tei:note[@type='dayNo']"
+    },
+    "multi": {
+    }
+  }
+}
