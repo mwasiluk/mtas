@@ -42,6 +42,7 @@ class Proc:
 
         self.load_words = options.load_words
         self.load_groups = options.load_groups
+        self.load_utterances = options.load_utterances
 
 
         self.pages = []
@@ -65,9 +66,13 @@ class Proc:
 
         self.p_begins = set()
         self.ab_begins = set()
+        self.u_begins = set()
 
         self.p_begin = None
         self.ab_begin = None
+        self.u_begin = None
+
+        self.utterances_by_id = {}
 
         self.debug = False
         pass
@@ -133,7 +138,7 @@ class Proc:
         if self.load_foreign_from_seg_only:
             self.do_load_foreign_from_seg_only(ns, seg_doc)
 
-        process_text_structure = self.load_pages or self.load_foreign or self.load_gaps
+        process_text_structure = self.load_pages or self.load_foreign or self.load_gaps or self.load_utterances
         if process_text_structure:
             self.proc_elem(body)
 
@@ -178,25 +183,25 @@ class Proc:
                 ptr_list = [ptr.replace(self.morphosyntax_filename + '#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
                 words_item['morph_segment_ids'] = ptr_list
 
-                try:
-                    fs = s.xpath("tei:fs[@type='words']", namespaces=ns)[0]
-                    try:
-                        words_item['base'] = fs.xpath("tei:f[@name='base']/tei:string/text()", namespaces=ns)[0]
-                    except:
-                        pass
-                    try:
-                        words_item['ctag'] = fs.xpath("tei:f[@name='ctag']/tei:symbol/@value", namespaces=ns)[0]
-                    except:
-                        pass
-                    try:
-                        words_item['msd'] = fs.xpath("tei:f[@name='msd']/tei:symbol/@value", namespaces=ns)[0]
-                    except:
-                        pass
-
-                except:
-                    pass
-
                 if self.load_words:
+                    try:
+                        fs = s.xpath("tei:fs[@type='words']", namespaces=ns)[0]
+                        try:
+                            words_item['base'] = fs.xpath("tei:f[@name='base']/tei:string/text()", namespaces=ns)[0]
+                        except:
+                            pass
+                        try:
+                            words_item['ctag'] = fs.xpath("tei:f[@name='ctag']/tei:symbol/@value", namespaces=ns)[0]
+                        except:
+                            pass
+                        try:
+                            words_item['msd'] = fs.xpath("tei:f[@name='msd']/tei:symbol/@value", namespaces=ns)[0]
+                        except:
+                            pass
+
+                    except:
+                        pass
+
                     self.append_word(words_elem, words_item, ns)
 
         groups_file_path = os.path.join(dirname, self.options.groups_filename)
@@ -225,18 +230,18 @@ class Proc:
                         group_item['type'] = fs.xpath("tei:f[@name='type']/tei:symbol/@value", namespaces=ns)[0]
                     except:
                         pass
-                    try:
-                        group_item['semh'] = fs.xpath("tei:f[@name='semh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
-                    except:
-                        pass
-                    try:
-                        group_item['synh'] = fs.xpath("tei:f[@name='synh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
-                    except:
-                        pass
+                    # try:
+                    #     group_item['semh'] = fs.xpath("tei:f[@name='semh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
+                    # except:
+                    #     pass
+                    # try:
+                    #     group_item['synh'] = fs.xpath("tei:f[@name='synh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
+                    # except:
+                    #     pass
 
                 except:
                     pass
-                ptr_list = [ptr.replace(self.options.words_filename + '#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
+                ptr_list = [ptr.replace(self.options.words_filename + '#', '').replace('#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
                 group_item['ptr_ids'] = ptr_list
 
 
@@ -384,7 +389,7 @@ class Proc:
 
             # print(self.ner_by_morph_from)
 
-        if process_text_structure or self.load_senses or self.load_ner:
+        if process_text_structure or self.load_senses or self.load_ner or self.load_utterances:
 
             if self.current_page is not None and self.prevSeg is not None:
                 self.current_page['to'] = self.get_id(self.prevSeg)
@@ -471,8 +476,11 @@ class Proc:
                     if corresp_id in self.p_begins:
                         s.attrib['p_begin'] = 'true'
 
-                    if corresp_id in self.ab_begins:
+                    elif corresp_id in self.ab_begins:
                         s.attrib['ab_begin'] = 'true'
+
+                    elif corresp_id in self.u_begins:
+                        s.attrib['u_begin'] = 'true'
 
                 if corresp_id in self.notes:
                     s.attrib['note'] = 'true'
@@ -508,6 +516,15 @@ class Proc:
                     attrs['n'] = p['n']
                     pages_elem.append(ET.Element('page', attrib=attrs, nsmap=ns))
 
+            if self.load_utterances:
+                for p in morph_doc.xpath(".//tei:p", namespaces=ns):
+                    p_id = self.get_id(p)
+                    try:
+                        who = self.utterances_by_id[p_id]
+                        p.attrib['who'] = who
+                    except KeyError:
+                        pass
+
 
         morph_doc.write(os.path.join(dirname, 'mtas_tei.xml'), encoding='utf-8', xml_declaration=True)
 
@@ -542,8 +559,9 @@ class Proc:
         element = ET.Element('g', attrib=attrs, nsmap=ns)
         groups_elem.append(element)
         for w in group_item['words']:
-            semh = w['words_seg_id'] == group_item['semh']
-            synh = w['words_seg_id'] == group_item['synh']
+
+            semh = False and w['words_seg_id'] == group_item['semh']
+            synh = False and w['words_seg_id'] == group_item['synh']
             for seg_id in w['morph_segment_ids']:
                 seg_attrs = {'id': seg_id}
                 if semh:
@@ -679,8 +697,16 @@ class Proc:
             if self.ab_begin:
                 seg.attrib['ab_begin'] = 'true'
                 self.ab_begins.add(id)
+
+            if self.u_begin:
+                seg.attrib['u_begin'] = 'true'
+                self.u_begins.add(id)
+
+
+
             self.p_begin = None
             self.ab_begin = None
+            self.u_begin = None
 
         if note:
             self.notes.add(id)
@@ -752,6 +778,13 @@ class Proc:
             self.p_begin = current_id
         elif elem.tag == '{http://www.tei-c.org/ns/1.0}ab':
             self.ab_begin = current_id
+        elif elem.tag == '{http://www.tei-c.org/ns/1.0}u':
+            self.u_begin = current_id
+            try:
+                who = elem.attrib['who']
+                self.utterances_by_id[current_id] = who
+            except KeyError:
+                pass
 
 
         current_elem_segments = None
@@ -1157,6 +1190,9 @@ def go():
     parser.add_option('--groups-name', type='string', action='store', default="ann_groups.xml",
                       dest='groups_filename',
                       help='syntax groups file name, default: ann_groups.xml')
+    parser.add_option('--utterances', action='store_true',
+                      dest='load_utterances',
+                      help='load utterances (who)')
     parser.add_option('--metadata-only', action='store_true',
                       dest='metadata_only',
                       help='process metadata only')
@@ -1177,7 +1213,7 @@ def go():
     for i, filename in enumerate(args):
         print('%3d/%d: %s' % (i + 1, len(args), filename))
         try:
-            preprocessing = not options.metadata_only and (options.load_pages or options.load_foreign or options.load_foreign_from_seg or options.load_gaps or options.load_senses or options.load_ner)
+            preprocessing = not options.metadata_only and (options.load_pages or options.load_foreign or options.load_foreign_from_seg or options.load_gaps or options.load_senses or options.load_ner or options.load_utterances)
 
             if preprocessing:
                 mtas_file_name = 'mtas_tei.xml'

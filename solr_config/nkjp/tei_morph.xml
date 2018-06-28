@@ -158,6 +158,22 @@
 				</condition>
 			</mapping>
 
+			<!-- u_begin -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="u_begin" />
+					</pre>
+					<post>
+						<item type="attribute" name="u_begin" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="u_begin" />
+					<item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
 			<!-- note -->
 			<mapping type="word" name="seg">
 				<token type="string" offset="false" realoffset="false" parent="false">
@@ -552,6 +568,9 @@
 					<post>
 						<item type="attribute" name="type" />
 					</post>
+					<!--<payload>
+						<item type="attribute" name="certainty" />
+					</payload>-->
 				</token>
 				<condition>
 					<item type="attribute" name="type" />
@@ -571,14 +590,19 @@
 						<item type="name" />
 					</pre>
 				</token>
-				<!--<token type="string" offset="false" realoffset="false" parent="true">
+			</mapping>
+			<mapping type="group" name="p">
+				<token type="string" offset="false" realoffset="false" parent="true">
 					<pre>
-						<item type="string" value="p.id" />
+						<item type="string" value="who" />
 					</pre>
 					<post>
-						<item type="attribute" name="#" />
+						<item type="attribute" name="who" />
 					</post>
-				</token>-->
+				</token>
+				<condition>
+					<item type="attribute" name="who" />
+				</condition>
 			</mapping>
 			<mapping type="group" name="s">
 				<token type="string" offset="false" realoffset="false" parent="true">
