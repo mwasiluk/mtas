@@ -222,6 +222,22 @@
 				</condition>
 			</mapping>
 
+			<!-- who -->
+			<mapping type="word" name="seg">
+				<token type="string" offset="false" realoffset="false" parent="false">
+					<pre>
+						<item type="string" value="who" />
+					</pre>
+					<post>
+						<item type="attribute" name="who" />
+					</post>
+				</token>
+				<condition>
+					<item type="attribute" name="who" />
+					<item type="attribute" name="rejected" condition="true" not="true"/>
+				</condition>
+			</mapping>
+
 
 			<!-- END WORDS -->
 
@@ -591,7 +607,7 @@
 					</pre>
 				</token>
 			</mapping>
-			<mapping type="group" name="p">
+			<!--<mapping type="group" name="p">
 				<token type="string" offset="false" realoffset="false" parent="true">
 					<pre>
 						<item type="string" value="who" />
@@ -603,7 +619,7 @@
 				<condition>
 					<item type="attribute" name="who" />
 				</condition>
-			</mapping>
+			</mapping>-->
 			<mapping type="group" name="s">
 				<token type="string" offset="false" realoffset="false" parent="true">
 					<pre>

@@ -43,6 +43,7 @@ class Proc:
         self.load_words = options.load_words
         self.load_groups = options.load_groups
         self.load_utterances = options.load_utterances
+        self.utterances_on_p_level = self.options.utterances_on_p_level
 
 
         self.pages = []
@@ -73,6 +74,7 @@ class Proc:
         self.u_begin = None
 
         self.utterances_by_id = {}
+        self.utterances_by_seg_id = {}
 
         self.debug = False
         pass
@@ -487,6 +489,13 @@ class Proc:
                 if corresp_id in self.fws:
                     s.attrib['fw'] = 'true'
 
+                if self.load_utterances and not self.utterances_on_p_level:
+                    try:
+                        who = self.utterances_by_seg_id[corresp_id]
+                        s.attrib['who'] = who
+                    except:
+                        pass
+
                 if corresp_id in self.senses_by_seg_id:
                     s.attrib['wsd'] = self.senses_by_seg_id[corresp_id]
 
@@ -516,7 +525,7 @@ class Proc:
                     attrs['n'] = p['n']
                     pages_elem.append(ET.Element('page', attrib=attrs, nsmap=ns))
 
-            if self.load_utterances:
+            if self.load_utterances and self.options.utterances_on_p_level:
                 for p in morph_doc.xpath(".//tei:p", namespaces=ns):
                     p_id = self.get_id(p)
                     try:
@@ -636,7 +645,7 @@ class Proc:
     def is_empty_text_elem(self, elem):
         return self.is_empty_txt(elem.text) and self.is_empty_txt(elem.tail)
 
-    def update_current_seg(self, seg, update_morph = False, foreign=None, fw=None, note=None):
+    def update_current_seg(self, seg, update_morph = False, foreign=None, fw=None, note=None, who=None):
 
         id = self.get_id(seg)
         rejected = False
@@ -711,12 +720,15 @@ class Proc:
         if note:
             self.notes.add(id)
 
+        if who:
+            self.utterances_by_seg_id[id] = who
+
         if fw:
             self.fws.add(id)
 
         self.prevSeg = seg
 
-    def proc_elem(self, elem, parent_trailing_segments=None, parent_text_len=0, parent_foreign=None, parent_fw=None, parent_note=None):
+    def proc_elem(self, elem, parent_trailing_segments=None, parent_text_len=0, parent_foreign=None, parent_fw=None, parent_note=None, parent_who=None):
 
 
         current_id = self.get_id(elem)
@@ -724,6 +736,7 @@ class Proc:
         foreign = parent_foreign
         fw = parent_fw
         note = parent_note
+        who = parent_who
 
 
         if elem.tag == '{http://www.tei-c.org/ns/1.0}pb':
@@ -781,9 +794,10 @@ class Proc:
         elif elem.tag == '{http://www.tei-c.org/ns/1.0}u':
             self.u_begin = current_id
             try:
-                who = elem.attrib['who']
+                who = elem.attrib['who'].replace('#', '', 1)
                 self.utterances_by_id[current_id] = who
             except KeyError:
+                who = None
                 pass
 
 
@@ -826,7 +840,7 @@ class Proc:
                         if int(m.groups()[0]) + s_len <= text_len + s_len * 0.15:
                             current_text_len = max(current_text_len, int(m.groups()[0]) + s_len)
                             #here
-                            self.update_current_seg(s, foreign=foreign, fw=fw, note=note)
+                            self.update_current_seg(s, foreign=foreign, fw=fw, note=note, who=who)
 
                         else:
                             tail_segments_start = i
@@ -877,13 +891,13 @@ class Proc:
         for c in elem:
             if c is None:
                 continue
-            trailing_segments, current_text_len = self.proc_elem(c, trailing_segments, current_text_len, parent_foreign=foreign, parent_fw=fw, parent_note=note)
+            trailing_segments, current_text_len = self.proc_elem(c, trailing_segments, current_text_len, parent_foreign=foreign, parent_fw=fw, parent_note=note, parent_who=who)
 
         if trailing_segments is not None and len(trailing_segments):
             if self.debug:
                 print('trailing_segments not empty!', len(trailing_segments), current_id)
             for i, s in enumerate(trailing_segments):
-                self.update_current_seg(s, foreign=parent_foreign, fw=parent_fw, note=note)
+                self.update_current_seg(s, foreign=parent_foreign, fw=parent_fw, note=note, who=who)
 
 
         if not self.is_empty_txt(elem.tail):
@@ -914,7 +928,7 @@ class Proc:
                                 text = s.find('tei:w', namespaces=self.ns).text
                                 str += '/(%s,%s,%s)'%(m.groups()[0], m.groups()[1], len_tail_len) + text
                             # matching segment detected here !!!!
-                            self.update_current_seg(s, foreign=parent_foreign, fw=parent_fw, note=parent_note)
+                            self.update_current_seg(s, foreign=parent_foreign, fw=parent_fw, note=parent_note, who=parent_who)
                         else:
                             break
                     else:
@@ -1216,6 +1230,9 @@ def go():
     parser.add_option('--utterances', action='store_true',
                       dest='load_utterances',
                       help='load utterances (who)')
+    parser.add_option('--utterances-on-p-level', action='store_true',
+                      dest='utterances_on_p_level',
+                      help='load utterances on paragraph level')
     parser.add_option('--metadata-only', action='store_true',
                       dest='metadata_only',
                       help='process metadata only')
