@@ -1064,7 +1064,6 @@ def read_bibl(elem, res, ns, attr_prefix='', date_int=False, additional_config=N
                     try:
                         pattern = re.compile(date_int_regex)
                         date_str_val = pattern.match(date_str_val).groups()[0]
-                        print(date_str_val)
                     except:
                         print('error extracting date int regex!')
                         pass
