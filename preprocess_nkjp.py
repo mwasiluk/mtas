@@ -942,7 +942,7 @@ class Proc:
         # print(elem.tail)
         return parent_trailing_segments,parent_text_len
 
-def read_bibl(elem, res, ns, attr_prefix='', date_int=False, additional_config=None):
+def read_bibl(elem, res, ns, attr_prefix='', date_int=False, additional_config=None, date_int_regex=None):
 
     # res[attr_prefix + 'title'] = ''
     title_sub = []
@@ -1054,10 +1054,24 @@ def read_bibl(elem, res, ns, attr_prefix='', date_int=False, additional_config=N
             res[attr_prefix + 'not_before'] = not_before
         elif date_str:
             try:
+
                 if 'when' in d.attrib:
-                    date_int_val = int(d.attrib['when'])
+                    date_str_val = d.attrib['when']
                 else:
-                    date_int_val = int(date_str)
+                    date_str_val = date_str
+
+                if date_int_regex:
+                    try:
+                        pattern = re.compile(date_int_regex)
+                        date_str_val = pattern.match(date_str_val).groups()[0]
+                        print(date_str_val)
+                    except:
+                        print('error extracting date int regex!')
+                        pass
+
+
+                date_int_val = int(date_str_val)
+
                 res[attr_prefix + 'date_int'] = date_int_val
             except:
                 pass
@@ -1093,7 +1107,7 @@ def read_bibl(elem, res, ns, attr_prefix='', date_int=False, additional_config=N
 
 
 
-def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_morphosyntax.xml', idno_type='nkjp', folder_name_as_id=False, additional_config=None):
+def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_morphosyntax.xml', idno_type='nkjp', folder_name_as_id=False, additional_config=None, date_int_regex=None):
 
     ns = {'tei': 'http://www.tei-c.org/ns/1.0', 'xml': 'http://www.w3.org/XML/1998/namespace'}
 
@@ -1114,14 +1128,14 @@ def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_mo
         bibl_elem = doc.find(".//tei:sourceDesc/tei:bibl", namespaces=ns)
 
 
-    read_bibl(bibl_elem, res, ns, '', date_int, additional_config=bibl_config)
+    read_bibl(bibl_elem, res, ns, '', date_int, additional_config=bibl_config, date_int_regex=date_int_regex)
 
     modernized_elem = bibl_elem.find("tei:bibl[@type='modernized']", namespaces=ns)
 
     if modernized_elem is not None:
         res['modernized'] = True
         monogr_elem = modernized_elem.find("tei:bibl[@type='monogr']", namespaces=ns)
-        read_bibl(modernized_elem, res, ns, 'modernized_', date_int, additional_config=bibl_config)
+        read_bibl(modernized_elem, res, ns, 'modernized_', date_int, additional_config=bibl_config, date_int_regex=date_int_regex)
     else:
         res['modernized'] = False
 
@@ -1197,6 +1211,9 @@ def go():
     parser.add_option('--date-int', action='store_true',
                       dest='date_int',
                       help='do not create date ranges (not_before and not_after) - create date_int instead')
+    parser.add_option('--date-int-regex', type='string', action='store', default=None,
+                      dest='date_int_regex',
+                      help='regex for date int extraction, target value should be in first capturing group, eg ([0-9]{4})-[0-9]{2}-[0-9]{2}')
     parser.add_option('--gaps', action='store_true',
                       dest='load_gaps',
                       help='load gaps')
@@ -1286,7 +1303,7 @@ def go():
             else:
                 mtas_file_name = options.morph_name
 
-            meta = get_metadata(filename, options.prefix, options.date_int, mtas_file_name, idno_type=options.idno_type, folder_name_as_id=options.folder_name_as_id, additional_config=meta_config)
+            meta = get_metadata(filename, options.prefix, options.date_int, mtas_file_name, idno_type=options.idno_type, folder_name_as_id=options.folder_name_as_id, additional_config=meta_config, date_int_regex=options.date_int_regex)
 
             if preprocessing:
                 p = Proc(filename, options, text_strucutre_file_name = options.text_name, load_pages=options.load_pages, load_foreign=options.load_foreign,
