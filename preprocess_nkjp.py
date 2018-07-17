@@ -18,7 +18,7 @@ import math
 class Proc:
     def __init__(self, header_filename, options, text_strucutre_file_name='text.xml', load_pages=False, load_foreign=False, load_gaps=False, load_senses=False,
                  morphosyntax_filename ='ann_morphosyntax.xml', segmentation_filename='ann_segmentation.xml', segmentation_orig_filename='ann_segmentation.xml',
-                 senses_filename='ann_senses.xml', load_foreign_from_seg_only=False, load_ner=False):
+                 senses_filename='ann_senses.xml', load_foreign_from_seg_only=False, load_ner=False, load_mentions=False, load_coreference=False):
         self.header_filename = header_filename
         self.options = options
         self.morphosyntax_filename = morphosyntax_filename
@@ -44,6 +44,8 @@ class Proc:
         self.load_groups = options.load_groups
         self.load_utterances = options.load_utterances
         self.utterances_on_p_level = self.options.utterances_on_p_level
+        self.load_mentions = load_mentions
+        self.load_coreference = load_coreference
 
 
         self.pages = []
@@ -63,7 +65,6 @@ class Proc:
         self.rejected = set()
 
         self.senses_by_seg_id = {}
-
 
         self.p_begins = set()
         self.ab_begins = set()
@@ -133,6 +134,10 @@ class Proc:
         text_elem.insert(0, words_elem)
         groups_elem = ET.Element('groups', nsmap=ns)
         text_elem.insert(0, groups_elem)
+        mentions_elem = ET.Element('mentions', nsmap=ns)
+        text_elem.insert(0, mentions_elem)
+        # coreference_elem = ET.Element('coreferences', nsmap=ns)
+        # text_elem.insert(0, coreference_elem)
 
         body = txt_doc.find('.//tei:text', namespaces=ns)
 
@@ -160,124 +165,14 @@ class Proc:
                 except:
                     pass
 
-        words_file_path = os.path.join(dirname, self.options.words_filename)
-        if (self.load_words or self.load_groups) and not os.path.isfile(words_file_path):
-            print("words file not found!")
-            self.load_groups = False
-            self.load_words = False
+        self.process_syntax_words(dirname, ns, words_elem)
 
-        if self.load_words or self.load_groups:
-            self.words_doc = ET.parse(words_file_path, ET.XMLParser(huge_tree=True, recover=True, dtd_validation=False, load_dtd=False))
-
-            self.word_by_id = {}
-            for s in self.words_doc.xpath(".//tei:seg", namespaces=ns):
-
-                s_id = self.get_id(s)
-                words_item = {
-                    'words_seg_id': s_id,
-                    'morph_segment_ids': []
-                }
-                if self.load_groups:
-                    self.word_by_id[s_id] = words_item
-
-
-                # self.words_list.append(words_item)
-                ptr_list = [ptr.replace(self.morphosyntax_filename + '#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
-                words_item['morph_segment_ids'] = ptr_list
-
-                if self.load_words:
-                    try:
-                        fs = s.xpath("tei:fs[@type='words']", namespaces=ns)[0]
-                        try:
-                            words_item['base'] = fs.xpath("tei:f[@name='base']/tei:string/text()", namespaces=ns)[0]
-                        except:
-                            pass
-                        try:
-                            words_item['ctag'] = fs.xpath("tei:f[@name='ctag']/tei:symbol/@value", namespaces=ns)[0]
-                        except:
-                            pass
-                        try:
-                            words_item['msd'] = fs.xpath("tei:f[@name='msd']/tei:symbol/@value", namespaces=ns)[0]
-                        except:
-                            pass
-
-                    except:
-                        pass
-
-                    self.append_word(words_elem, words_item, ns)
-
-        groups_file_path = os.path.join(dirname, self.options.groups_filename)
-        if self.load_groups and not os.path.isfile(groups_file_path):
-            print("groups file not found!")
-            self.load_groups = False
-        if self.load_groups:
-
-            group_by_id = {}
-            group_list = []
-            self.groups_doc = ET.parse(groups_file_path, ET.XMLParser(huge_tree=True, recover=True, dtd_validation=False, load_dtd=False))
-
-            for s in self.groups_doc.xpath(".//tei:seg", namespaces=ns):
-                s_id = self.get_id(s)
-                group_item = {
-                    'groups_seg_id': s_id
-                }
-                group_by_id[s_id] = group_item
-                group_list.append(group_item)
-                semh = None
-                synh = None
-
-                try:
-                    fs = s.xpath("tei:fs[@type='group']", namespaces=ns)[0]
-                    try:
-                        group_item['type'] = fs.xpath("tei:f[@name='type']/tei:symbol/@value", namespaces=ns)[0]
-                    except:
-                        pass
-                    # try:
-                    #     group_item['semh'] = fs.xpath("tei:f[@name='semh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
-                    # except:
-                    #     pass
-                    # try:
-                    #     group_item['synh'] = fs.xpath("tei:f[@name='synh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
-                    # except:
-                    #     pass
-
-                except:
-                    pass
-                ptr_list = [ptr.replace(self.options.words_filename + '#', '').replace('#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
-                group_item['ptr_ids'] = ptr_list
-
-
-            for g in group_list:
-                morph_segments = []
-                words = []
-
-                buff = [g]
-
-                while len(buff):
-                    item = buff.pop(0)
-
-                    if 'morph_segment_ids' in item:
-                        morph_segments.extend(item['morph_segment_ids'])
-                        if 'words' in item:
-                            words.extend(item['words'])
-                        else:
-                            words.append(item)
-                        continue
-                    if 'ptr_ids' in item:
-                        for ptr in reversed(item['ptr_ids']):
-                            if ptr.startswith('groups_'):
-                                buff.insert(0, group_by_id[ptr])
-                            else:
-                                buff.insert(0, self.word_by_id[ptr])
-
-                g['words'] = words
-                g['morph_segment_ids'] = morph_segments
-                self.append_group(groups_elem, g, ns)
-
-            del group_by_id
-            del group_list
+        self.process_groups(dirname, groups_elem, ns)
 
         self.word_by_id = {}
+
+        self.process_mentions(dirname, ns, mentions_elem)
+        self.process_coreference(dirname, mentions_elem, ns)
 
         self.ner_by_morph_from = {}
         ner_file_path = os.path.join(dirname, self.options.ner_filename)
@@ -537,6 +432,245 @@ class Proc:
 
         morph_doc.write(os.path.join(dirname, 'mtas_tei.xml'), encoding='utf-8', xml_declaration=True)
 
+    def process_syntax_words(self, dirname, ns, words_elem):
+        words_file_path = os.path.join(dirname, self.options.words_filename)
+        if (self.load_words or self.load_groups) and not os.path.isfile(words_file_path):
+            print("words file not found!")
+            self.load_groups = False
+            self.load_words = False
+        if self.load_words or self.load_groups:
+            self.words_doc = ET.parse(words_file_path, ET.XMLParser(huge_tree=True, recover=True, dtd_validation=False, load_dtd=False))
+
+            self.word_by_id = {}
+            for s in self.words_doc.xpath(".//tei:seg", namespaces=ns):
+
+                s_id = self.get_id(s)
+                words_item = {
+                    'words_seg_id': s_id,
+                    'morph_segment_ids': []
+                }
+                if self.load_groups:
+                    self.word_by_id[s_id] = words_item
+
+                # self.words_list.append(words_item)
+                ptr_list = [ptr.replace(self.morphosyntax_filename + '#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
+                words_item['morph_segment_ids'] = ptr_list
+
+                if self.load_words:
+                    try:
+                        fs = s.xpath("tei:fs[@type='words']", namespaces=ns)[0]
+                        try:
+                            words_item['base'] = fs.xpath("tei:f[@name='base']/tei:string/text()", namespaces=ns)[0]
+                        except:
+                            pass
+                        try:
+                            words_item['ctag'] = fs.xpath("tei:f[@name='ctag']/tei:symbol/@value", namespaces=ns)[0]
+                        except:
+                            pass
+                        try:
+                            words_item['msd'] = fs.xpath("tei:f[@name='msd']/tei:symbol/@value", namespaces=ns)[0]
+                        except:
+                            pass
+
+                    except:
+                        pass
+
+                    self.append_word(words_elem, words_item, ns)
+
+    def process_groups(self, dirname, groups_elem, ns):
+        groups_file_path = os.path.join(dirname, self.options.groups_filename)
+        if self.load_groups and not os.path.isfile(groups_file_path):
+            print("groups file not found!")
+            self.load_groups = False
+        if self.load_groups:
+
+            group_by_id = {}
+            group_list = []
+            self.groups_doc = ET.parse(groups_file_path, ET.XMLParser(huge_tree=True, recover=True, dtd_validation=False, load_dtd=False))
+
+            for s in self.groups_doc.xpath(".//tei:seg", namespaces=ns):
+                s_id = self.get_id(s)
+                group_item = {
+                    'groups_seg_id': s_id
+                }
+                group_by_id[s_id] = group_item
+                group_list.append(group_item)
+                semh = None
+                synh = None
+
+                try:
+                    fs = s.xpath("tei:fs[@type='group']", namespaces=ns)[0]
+                    try:
+                        group_item['type'] = fs.xpath("tei:f[@name='type']/tei:symbol/@value", namespaces=ns)[0]
+                    except:
+                        pass
+                        # try:
+                        #     group_item['semh'] = fs.xpath("tei:f[@name='semh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
+                        # except:
+                        #     pass
+                        # try:
+                        #     group_item['synh'] = fs.xpath("tei:f[@name='synh']/@fVal", namespaces=ns)[0].replace(self.options.words_filename + '#', '')
+                        # except:
+                        #     pass
+
+                except:
+                    pass
+                ptr_list = [ptr.replace(self.options.words_filename + '#', '').replace('#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
+                group_item['ptr_ids'] = ptr_list
+
+            for g in group_list:
+                morph_segments = []
+                words = []
+
+                buff = [g]
+
+                while len(buff):
+                    item = buff.pop(0)
+
+                    if 'morph_segment_ids' in item:
+                        morph_segments.extend(item['morph_segment_ids'])
+                        if 'words' in item:
+                            words.extend(item['words'])
+                        else:
+                            words.append(item)
+                        continue
+                    if 'ptr_ids' in item:
+                        for ptr in reversed(item['ptr_ids']):
+                            if ptr.startswith('groups_'):
+                                buff.insert(0, group_by_id[ptr])
+                            else:
+                                buff.insert(0, self.word_by_id[ptr])
+
+                g['words'] = words
+                g['morph_segment_ids'] = morph_segments
+                self.append_group(groups_elem, g, ns)
+
+            del group_by_id
+            del group_list
+
+    def process_mentions(self, dirname, ns, mentions_elem):
+        mentions_file_path = os.path.join(dirname, self.options.mentions_filename)
+        if (self.load_mentions or self.load_coreference) and not os.path.isfile(mentions_file_path):
+            print("mentions file not found!")
+            self.load_coreference = False
+            self.load_mentions = False
+        if self.load_mentions or self.load_coreference:
+            self.mentions_doc = ET.parse(mentions_file_path, ET.XMLParser(huge_tree=True, recover=True, dtd_validation=False, load_dtd=False))
+
+            self.mention_by_id = {}
+            for s in self.mentions_doc.xpath(".//tei:seg", namespaces=ns):
+
+                s_id = self.get_id(s)
+                mentions_item = {
+                    'mentions_seg_id': s_id,
+                    'morph_segment_ids': []
+                }
+                if self.load_coreference:
+                    self.mention_by_id[s_id] = mentions_item
+
+                # self.mentions_list.append(mentions_item)
+                ptr_list = [ptr.replace(self.morphosyntax_filename + '#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
+                mentions_item['morph_segment_ids'] = ptr_list
+
+                if self.load_mentions:
+                    try:
+                        fs = s.xpath("tei:fs[@type='mentions']", namespaces=ns)[0]
+                        try:
+                            mentions_item['semh'] = fs.xpath("tei:f[@name='semh']/tei:string/text()", namespaces=ns)[0]
+                        except:
+                            pass
+
+
+                    except:
+                        pass
+
+                    self.append_mention(mentions_elem, mentions_item, ns)
+
+    def process_coreference(self, dirname, mentions_elem, ns):
+        coreference_file_path = os.path.join(dirname, self.options.coreference_filename)
+        if self.load_coreference and not os.path.isfile(coreference_file_path):
+            print("coreference file not found!")
+            self.load_coreference = False
+        if self.load_coreference:
+
+            coreference_by_id = {}
+            coreference_list = []
+            self.coreference_doc = ET.parse(coreference_file_path, ET.XMLParser(huge_tree=True, recover=True, dtd_validation=False, load_dtd=False))
+
+            for s in self.coreference_doc.xpath(".//tei:seg", namespaces=ns):
+                s_id = self.get_id(s)
+                coreference_item = {
+                    'coreference_seg_id': s_id
+                }
+                coreference_by_id[s_id] = coreference_item
+                coreference_list.append(coreference_item)
+
+                try:
+                    fs = s.xpath("tei:fs[@type='coreference']", namespaces=ns)[0]
+                    try:
+                        coreference_item['type'] = fs.xpath("tei:f[@name='type']/@fVal", namespaces=ns)[0]
+                    except:
+                        coreference_item['type'] = None
+
+                    try:
+                        coreference_item['dominant'] = fs.xpath("tei:f[@name='dominant']/@fVal", namespaces=ns)[0]
+                    except:
+                        coreference_item['dominant'] = None
+
+                except:
+                    pass
+                ptr_list = [ptr.replace(self.options.mentions_filename + '#', '').replace('#', '') for ptr in s.xpath("tei:ptr/@target", namespaces=ns)]
+                coreference_item['ptr_ids'] = ptr_list
+
+            for g in coreference_list:
+                morph_segments = []
+                mentions = []
+
+                buff = [g]
+
+                while len(buff):
+                    item = buff.pop(0)
+
+                    if 'morph_segment_ids' in item:
+                        morph_segments.extend(item['morph_segment_ids'])
+                        if 'mentions' in item:
+                            mentions.extend(item['mentions'])
+                        else:
+                            mentions.append(item)
+                        continue
+                    if 'ptr_ids' in item:
+                        for ptr in reversed(item['ptr_ids']):
+                            if ptr.startswith('coreference_'):
+                                buff.insert(0, coreference_by_id[ptr])
+                            else:
+                                buff.insert(0, self.mention_by_id[ptr])
+
+                g['mentions'] = mentions
+                g['morph_segment_ids'] = morph_segments
+                self.append_coreference_to_mentions(g, ns)
+
+            del coreference_by_id
+            del coreference_list
+
+    def append_mention(self, mentions_elem, mention_item, ns):
+        if 'appended' in mention_item and mention_item['appended']:
+            return
+
+        attrs = {'id': mention_item['mentions_seg_id']}
+        for a in attrs:
+            if attrs[a] is None:
+                attrs[a] = ''
+        mention_item['appended'] = True
+        element = ET.Element('m', attrib=attrs, nsmap=ns)
+        mentions_elem.append(element)
+
+        if self.load_coreference:
+            mention_item['elem'] = element
+
+        for seg_id in mention_item['morph_segment_ids']:
+
+            seg_attrs = {'id': seg_id}
+            element.append(ET.Element('wref', attrib=seg_attrs, nsmap=ns))
 
     def append_word(self, words_elem, word_item, ns):
         if 'appended' in word_item and word_item['appended']:
@@ -580,6 +714,38 @@ class Proc:
                 element.append(ET.Element('wref', attrib=seg_attrs, nsmap=ns))
                 semh = synh = False
 
+    def append_coreference(self, coreferences_elem, coreference_item, ns):
+        if 'appended' in coreference_item and coreference_item['appended']:
+            return
+
+        attrs = {'id': coreference_item['coreference_seg_id'], 'type': coreference_item['type'], 'dominant': coreference_item['dominant']}
+        for a in attrs:
+            if attrs[a] is None:
+                attrs[a] = ''
+        coreference_item['appended'] = True
+        element = ET.Element('coref', attrib=attrs, nsmap=ns)
+        coreferences_elem.append(element)
+        for w in coreference_item['mentions']:
+            for seg_id in w['morph_segment_ids']:
+                seg_attrs = {'id': seg_id}
+                element.append(ET.Element('wref', attrib=seg_attrs, nsmap=ns))
+                semh = synh = False
+
+
+    def append_coreference_to_mentions(self, coreference_item, ns):
+        if 'appended' in coreference_item and coreference_item['appended']:
+            return
+
+        attrs = {'id': coreference_item['coreference_seg_id'], 'type': coreference_item['type'], 'dominant': coreference_item['dominant']}
+        for a in attrs:
+            if attrs[a] is None:
+                attrs[a] = ''
+        coreference_item['appended'] = True
+
+
+        for w in coreference_item['mentions']:
+            element = ET.Element('coref', attrib=attrs, nsmap=ns)
+            w['elem'].append(element)
 
     def append_ne(self, named_elem, ner_item, ns):
         if 'appended' in ner_item and ner_item['appended']:
@@ -945,41 +1111,45 @@ class Proc:
 def read_bibl(elem, res, ns, attr_prefix='', date_int=False, additional_config=None, date_int_regex=None):
 
     # res[attr_prefix + 'title'] = ''
-    title_sub = []
 
-    title_by_level = {}
-    all_titles = []
-    for idx, title_elem in enumerate(elem.findall("tei:title", namespaces=ns)):
-        try:
-            level = title_elem.attrib['level']
-        except:
-            level = 'n/a'
-        all_titles.append(title_elem.text)
-        title_by_level[level] = title_elem.text
-        if idx > 0:
-            title_sub.append(title_elem.text)
+    title_elems = elem.findall("tei:title", namespaces=ns)
+    if title_elems is not None:
+        title_sub = []
 
-    title = None
-    if len(title_sub):
-        res[attr_prefix + 'title_sub'] = title_sub
+        title_by_level = {}
+        all_titles = []
 
-    if len(title_by_level) == 1:
-        title = all_titles[0]
-    elif 'n/a' in title_by_level:
-        title = title_by_level['n/a']
+        for idx, title_elem in enumerate(title_elems):
+            try:
+                level = title_elem.attrib['level']
+            except:
+                level = 'n/a'
+            all_titles.append(title_elem.text)
+            title_by_level[level] = title_elem.text
+            if idx > 0:
+                title_sub.append(title_elem.text)
 
-    if 'a' in title_by_level:
-        title = title_by_level['a']
-        if 'm' in title_by_level:
-            res[attr_prefix + 'book_title'] = title_by_level['m']
-    elif 'm' in title_by_level:
-        title = title_by_level['m']
+        title = None
+        if len(title_sub):
+            res[attr_prefix + 'title_sub'] = title_sub
 
-    if title:
-        res[attr_prefix + 'title'] = title
+        if len(title_by_level) == 1:
+            title = all_titles[0]
+        elif 'n/a' in title_by_level:
+            title = title_by_level['n/a']
 
-    if 'j' in title_by_level:
-        res[attr_prefix + 'series_title'] = title_by_level['j']
+        if 'a' in title_by_level:
+            title = title_by_level['a']
+            if 'm' in title_by_level:
+                res[attr_prefix + 'book_title'] = title_by_level['m']
+        elif 'm' in title_by_level:
+            title = title_by_level['m']
+
+        if title:
+            res[attr_prefix + 'title'] = title
+
+        if 'j' in title_by_level:
+            res[attr_prefix + 'series_title'] = title_by_level['j']
 
     try:
         res[attr_prefix+'author'] = elem.find('tei:author', namespaces=ns).text
@@ -1126,17 +1296,17 @@ def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_mo
     if not bibl_elem:
         bibl_elem = doc.find(".//tei:sourceDesc/tei:bibl", namespaces=ns)
 
+    if bibl_elem:
+        read_bibl(bibl_elem, res, ns, '', date_int, additional_config=bibl_config, date_int_regex=date_int_regex)
 
-    read_bibl(bibl_elem, res, ns, '', date_int, additional_config=bibl_config, date_int_regex=date_int_regex)
+        modernized_elem = bibl_elem.find("tei:bibl[@type='modernized']", namespaces=ns)
 
-    modernized_elem = bibl_elem.find("tei:bibl[@type='modernized']", namespaces=ns)
-
-    if modernized_elem is not None:
-        res['modernized'] = True
-        monogr_elem = modernized_elem.find("tei:bibl[@type='monogr']", namespaces=ns)
-        read_bibl(modernized_elem, res, ns, 'modernized_', date_int, additional_config=bibl_config, date_int_regex=date_int_regex)
-    else:
-        res['modernized'] = False
+        if modernized_elem is not None:
+            res['modernized'] = True
+            monogr_elem = modernized_elem.find("tei:bibl[@type='monogr']", namespaces=ns)
+            read_bibl(modernized_elem, res, ns, 'modernized_', date_int, additional_config=bibl_config, date_int_regex=date_int_regex)
+        else:
+            res['modernized'] = False
 
     res['id'] = os.path.basename(os.path.dirname(filename))
 
@@ -1249,6 +1419,18 @@ def go():
     parser.add_option('--utterances-on-p-level', action='store_true',
                       dest='utterances_on_p_level',
                       help='load utterances on paragraph level')
+    parser.add_option('--mentions', action='store_true',
+                      dest='load_mentions',
+                      help='load mentions')
+    parser.add_option('--mentions-name', type='string', action='store', default="ann_mentions.xml",
+                      dest='mentions_filename',
+                      help='mentions file name, default: ann_mentions.xml')
+    parser.add_option('--coreference', action='store_true',
+                      dest='load_coreference',
+                      help='load coreference')
+    parser.add_option('--coreference-name', type='string', action='store', default="ann_coreference.xml",
+                      dest='coreference_filename',
+                      help='coreference file name, default: ann_coreference.xml')
     parser.add_option('--metadata-only', action='store_true',
                       dest='metadata_only',
                       help='process metadata only')
@@ -1280,10 +1462,6 @@ def go():
     #             "title_en": "tei:title[@xml:lang='en']",
     #             "publisher": "tei:publisher[@xml:lang='pl']",
     #             "publisher_en": "tei:publisher[@xml:lang='en']",
-    #             "termNo": "tei:note[@type='termNo']",
-    #             "type": "tei:note[@type='type']",
-    #             "sessionNo": "tei:note[@type='sessionNo']",
-    #             "dayNo": "tei:note[@type='dayNo']"
     #         },
     #         "multi":{
     #
@@ -1295,7 +1473,7 @@ def go():
     for i, filename in enumerate(args):
         print('%3d/%d: %s' % (i + 1, len(args), filename))
         try:
-            preprocessing = not options.metadata_only and (options.load_pages or options.load_foreign or options.load_foreign_from_seg or options.load_gaps or options.load_senses or options.load_ner or options.load_utterances)
+            preprocessing = not options.metadata_only and (options.load_pages or options.load_foreign or options.load_foreign_from_seg or options.load_gaps or options.load_senses or options.load_ner or options.load_utterances or options.load_mentions or options.load_coreference)
 
             if preprocessing:
                 mtas_file_name = 'mtas_tei.xml'
@@ -1307,7 +1485,7 @@ def go():
             if preprocessing:
                 p = Proc(filename, options, text_strucutre_file_name = options.text_name, load_pages=options.load_pages, load_foreign=options.load_foreign,
                          load_gaps=options.load_gaps, morphosyntax_filename=options.morph_name, segmentation_filename=options.seg_name, segmentation_orig_filename=options.seg_orig_name,
-                         load_foreign_from_seg_only = options.load_foreign_from_seg, senses_filename=options.senses_filename, load_senses = options.load_senses, load_ner = options.load_ner)
+                         load_foreign_from_seg_only = options.load_foreign_from_seg, senses_filename=options.senses_filename, load_senses = options.load_senses, load_ner = options.load_ner, load_mentions = options.load_mentions, load_coreference=options.load_coreference)
                 p.preprocess()
                 meta[0]['lang'] = p.main_lang
 
