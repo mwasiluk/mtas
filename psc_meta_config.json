@@ -7,7 +7,9 @@
       "termNo": "tei:note[@type='termNo']",
       "text_type": "tei:note[@type='type']",
       "sessionNo": "tei:note[@type='sessionNo']",
-      "dayNo": "tei:note[@type='dayNo']"
+      "dayNo": "tei:note[@type='dayNo']",
+      "number": "tei:note[@type='number']",
+      "part": "tei:note[@type='part']"
     },
     "multi": {
     }
