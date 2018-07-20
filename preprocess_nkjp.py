@@ -1260,9 +1260,14 @@ def read_bibl(elem, res, ns, attr_prefix='', date_int=False, additional_config=N
             prop_xpath = single_conf[prop]
 
             try:
-                res_elem = elem.find(prop_xpath, namespaces=ns)
-                if res_elem is not None:
-                    res[attr_prefix + prop] = res_elem.text
+                res_elem = elem.xpath(prop_xpath, namespaces=ns)
+                if res_elem is not None and len(res_elem):
+                    val = res_elem[0]
+                    try:
+                        val = val.text
+                    except:
+                        pass
+                    res[attr_prefix + prop] = val
                     # print(prop, prop_xpath, res_elem.text)
             except Exception as e:
                 print("error processing additional metadata bibl field", prop, prop_xpath, str(e))
@@ -1281,14 +1286,25 @@ def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_mo
     ns = {'tei': 'http://www.tei-c.org/ns/1.0', 'xml': 'http://www.w3.org/XML/1998/namespace'}
 
     doc = ElementTree(file = filename)
+    dirname = os.path.dirname(filename)
     res = {
         'type': 'tei',
-        'text_data': prefix+os.path.join(os.path.dirname(filename), mtas_tei_file_name)
+        'text_data': prefix+os.path.join(dirname, mtas_tei_file_name)
     }
     bibl_config = None
+    doc_config = None
+    dirname_regex_config = None
     if additional_config:
         try:
             bibl_config = additional_config["bibl"]
+        except KeyError:
+            pass
+        try:
+            doc_config = additional_config["doc"]
+        except KeyError:
+            pass
+        try:
+            dirname_regex_config = additional_config["dirname_regex"]
         except KeyError:
             pass
 
@@ -1296,7 +1312,7 @@ def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_mo
     if not bibl_elem:
         bibl_elem = doc.find(".//tei:sourceDesc/tei:bibl", namespaces=ns)
 
-    if bibl_elem:
+    if bibl_elem is not None:
         read_bibl(bibl_elem, res, ns, '', date_int, additional_config=bibl_config, date_int_regex=date_int_regex)
 
         modernized_elem = bibl_elem.find("tei:bibl[@type='modernized']", namespaces=ns)
@@ -1324,7 +1340,30 @@ def get_metadata(filename, prefix='', date_int=False, mtas_tei_file_name='ann_mo
     except:
         res['availability'] = 'unknown'
 
+    if doc_config:
+        single_conf = doc_config["single"]
+        for prop in single_conf:
+            prop_xpath = single_conf[prop]
 
+            try:
+                res_elem = doc.xpath(prop_xpath, namespaces=ns)
+                if res_elem is not None and len(res_elem):
+                    val = res_elem[0]
+                    try:
+                        val = val.text
+                    except:
+                        pass
+                    res[prop] = val
+                    # print(prop, prop_xpath, res_elem.text)
+            except Exception as e:
+                print("error processing additional metadata bibl field", prop, prop_xpath, str(e))
+                pass
+
+    if dirname_regex_config:
+        for prop in dirname_regex_config:
+            m = re.fullmatch(dirname_regex_config[prop], dirname)
+            if m:
+                res[prop] = m.group(1)
 
     text_class_elem = doc.find('.//tei:profileDesc/tei:textClass', namespaces=ns)
 
