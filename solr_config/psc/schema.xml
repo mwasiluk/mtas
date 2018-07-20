@@ -25,10 +25,12 @@
     <field name="text_type" type="string" required="false" multiValued="false" indexed="true" stored="true"/>
     <field name="sessionNo" type="string" required="false" multiValued="false" indexed="true" stored="true"/>
     <field name="dayNo" type="string" required="false" multiValued="false" indexed="true" stored="true"/>
+    <field name="number" type="string" required="false" multiValued="false" indexed="true" stored="true"/>
+    <field name="part" type="string" required="false" multiValued="false" indexed="true" stored="true"/>
 
 
     <field name="date" type="string" required="false" multiValued="false" indexed="true" stored="true"/>
-
+    <field name="date_int" type="int" required="false" multiValued="false" indexed="true" stored="true"/>
 
 
     <field name="text_data" type="mtas" required="false" multiValued="false" indexed="true" stored="true"/>
