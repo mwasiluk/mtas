@@ -7,12 +7,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -101,6 +98,7 @@ public class MtasUpdateRequestProcessorFactory
           config.fieldTypeSizeField.put(entry.getKey(), mpaf.setSize);
           config.fieldTypeErrorField.put(entry.getKey(), mpaf.setError);
           config.fieldTypePrefixField.put(entry.getKey(), mpaf.setPrefix);
+          config.fieldTypePrefixNumbersFieldPrefix.put(entry.getKey(), mpaf.setPrefixNumbers);
           if (mpaf.followIndexAnalyzer == null
               || !fieldTypes.containsKey(mpaf.followIndexAnalyzer)) {
             throw new IOException(
@@ -341,7 +339,9 @@ class MtasUpdateRequestProcessor extends UpdateRequestProcessor {
             result = new MtasUpdateRequestProcessorResultWriter(storedValue);
             int numberOfPositions = 0;
             int numberOfTokens = 0;
-            Set<String> prefixes = new HashSet<>();
+            Map<String,Integer> prefixes = new HashMap<>();
+            String prefix;
+            Integer prefixCount;
             try (MtasTokenizer tokenizer = tokenizerFactory.create(configuration, defaultConfiguration)) {              
               tokenizer.setReader(sizeReader);
               tokenizer.reset();
@@ -366,7 +366,13 @@ class MtasUpdateRequestProcessor extends UpdateRequestProcessor {
                 BytesRef payload = null;
                 if (termAttribute != null) {
                   term = termAttribute.toString();
-                  prefixes.add(CodecUtil.termPrefix(term));
+                  prefix = CodecUtil.termPrefix(term);
+                  prefixCount = prefixes.get(prefix);
+                  if(prefixCount!=null) {
+                	  prefixes.put(prefix,  prefixCount+1);
+                  } else {
+                	  prefixes.put(prefix,  1);
+                  }
                 }
                 if (offsetAttribute != null) {
                   offsetStart = offsetAttribute.startOffset();
@@ -410,7 +416,13 @@ class MtasUpdateRequestProcessor extends UpdateRequestProcessor {
                 numberOfTokens);
             // update prefixes
             setFields(doc, config.fieldTypePrefixField.get(fieldType),
-                prefixes);
+                prefixes.keySet());
+            if(config.fieldTypePrefixNumbersFieldPrefix.get(fieldType)!=null) {
+	            for(Entry<String,Integer> prefixesEntry : prefixes.entrySet()) {
+	            	setFields(doc, config.fieldTypePrefixNumbersFieldPrefix.get(fieldType)+prefixesEntry.getKey(),
+	            			prefixesEntry.getValue());
+	            }
+            }    
           } catch (IOException e) {
             log.info(e);
             // update error
@@ -474,6 +486,7 @@ class MtasUpdateRequestProcessorConfig {
   HashMap<String, String> fieldTypeSizeField;
   HashMap<String, String> fieldTypeErrorField;
   HashMap<String, String> fieldTypePrefixField;
+  HashMap<String, String> fieldTypePrefixNumbersFieldPrefix;
 
   MtasUpdateRequestProcessorConfig() {
     fieldMapping = new HashMap<>();
@@ -486,6 +499,7 @@ class MtasUpdateRequestProcessorConfig {
     fieldTypeSizeField = new HashMap<>();
     fieldTypeErrorField = new HashMap<>();
     fieldTypePrefixField = new HashMap<>();
+    fieldTypePrefixNumbersFieldPrefix = new HashMap<>();
   }
 
 }

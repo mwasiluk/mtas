@@ -5,20 +5,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
-
 import org.apache.solr.common.util.SimpleOrderedMap;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class MtasSolrBaseList.
  */
 public abstract class MtasSolrBaseList {
 
   /** The list. */
-  protected List<MtasSolrStatus> list;
-
+  protected List<MtasSolrStatus> data;
+  
   /** The index. */
   protected Map<String, MtasSolrStatus> index;
 
@@ -44,16 +44,18 @@ public abstract class MtasSolrBaseList {
    * Instantiates a new mtas solr base list.
    */
   public MtasSolrBaseList() {
-    list = Collections.synchronizedList(new ArrayList<MtasSolrStatus>());
+    data = Collections.synchronizedList(new ArrayList<MtasSolrStatus>());
     index = Collections.synchronizedMap(new HashMap<>());
   }
 
   /**
    * Gets the.
    *
-   * @param key the key
+   * @param key
+   *          the key
    * @return the mtas solr status
-   * @throws IOException Signals that an I/O exception has occurred.
+   * @throws IOException
+   *           Signals that an I/O exception has occurred.
    */
   public final MtasSolrStatus get(String key) throws IOException {
     return index.get(Objects.requireNonNull(key, "no key provided"));
@@ -62,13 +64,15 @@ public abstract class MtasSolrBaseList {
   /**
    * Adds the.
    *
-   * @param status the status
-   * @throws IOException Signals that an I/O exception has occurred.
+   * @param status
+   *          the status
+   * @throws IOException
+   *           Signals that an I/O exception has occurred.
    */
   public void add(MtasSolrStatus status) throws IOException {
     Objects.requireNonNull(status);
     if (enabled) {
-      list.add(status);
+      data.add(status);
       if (!index.containsKey(status.key())) {
         index.put(status.key(), status);
         garbageCollect();
@@ -78,7 +82,7 @@ public abstract class MtasSolrBaseList {
         MtasSolrStatus oldStatus = index.get(status.key());
         if (oldStatus == null) {
           index.put(status.key(), status);
-        } else if(oldStatus.finished()) {
+        } else if (oldStatus.finished()) {
           remove(oldStatus);
           index.put(status.key(), status);
         } else {
@@ -91,11 +95,12 @@ public abstract class MtasSolrBaseList {
   /**
    * Removes the.
    *
-   * @param status the status
+   * @param status
+   *          the status
    */
   public final void remove(MtasSolrStatus status) {
     Objects.requireNonNull(status);
-    list.remove(status);
+    data.remove(status);
     index.remove(status.key());
   }
 
@@ -108,15 +113,17 @@ public abstract class MtasSolrBaseList {
    * Reset.
    */
   public final void reset() {
-    list.clear();
+    data.clear();
     index.clear();
   }
 
   /**
    * Update key.
    *
-   * @param key the key
-   * @throws IOException Signals that an I/O exception has occurred.
+   * @param key
+   *          the key
+   * @throws IOException
+   *           Signals that an I/O exception has occurred.
    */
   public final void updateKey(String key) throws IOException {
     Objects.requireNonNull(key, "old key required");
@@ -134,7 +141,8 @@ public abstract class MtasSolrBaseList {
   /**
    * Sets the enabled.
    *
-   * @param flag the new enabled
+   * @param flag
+   *          the new enabled
    */
   public final void setEnabled(boolean flag) {
     if (enabled != flag) {
@@ -155,33 +163,36 @@ public abstract class MtasSolrBaseList {
   /**
    * Creates the list output.
    *
-   * @param shardRequests the shard requests
+   * @param shardRequests          the shard requests
+   * @param maxNumber the max number
    * @return the simple ordered map
    */
-  public SimpleOrderedMap<Object> createListOutput(boolean shardRequests) {
+  public SimpleOrderedMap<Object> createListOutput(boolean shardRequests, int maxNumber) {
     garbageCollect();
     SimpleOrderedMap<Object> output = new SimpleOrderedMap<>();
     output.add(NAME_ENABLED, enabled());
     output.add(NAME_ENABLED, true);
-    int numberTotal = list.size();
+    int numberTotal = data.size();
     ListData listData = new ListData();
-    if (numberTotal > 0) {
-      // create list
-      list.stream()
-          .collect(Collectors.collectingAndThen(Collectors.toList(), lst -> {
-            Collections.reverse(lst);
-            return lst.stream();
-          })).forEach((item) -> {
-            if (item.shardRequest()) {
-              listData.addShardRequest();
-              if (shardRequests) {
-                listData.outputList.add(item.createItemOutput());
-              }
-            } else {
-              listData.addNormal();
-              listData.outputList.add(item.createItemOutput());
-            }
-          });
+
+    synchronized (data) {
+      ListIterator<MtasSolrStatus> iter = data.listIterator(data.size());
+      MtasSolrStatus item;
+      int number = 0;
+      while (iter.hasPrevious() && number < maxNumber) {
+        item = iter.previous();
+        if (item.shardRequest()) {
+          listData.addShardRequest();
+          if (shardRequests) {
+            listData.outputList.add(item.createItemOutput());
+            number++;
+          }
+        } else {
+          listData.addNormal();
+          listData.outputList.add(item.createItemOutput());
+          number++;
+        }
+      }
     }
     output.add(NAME_SIZE_TOTAL, numberTotal);
     output.add(NAME_SIZE_NORMAL, listData.numberNormal);
@@ -194,13 +205,13 @@ public abstract class MtasSolrBaseList {
    * The Class ListData.
    */
   static class ListData {
-    
+
     /** The output list. */
     private List<SimpleOrderedMap<Object>> outputList;
-    
+
     /** The number normal. */
     private int numberNormal;
-    
+
     /** The number shard requests. */
     private int numberShardRequests;
 
